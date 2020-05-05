@@ -43,76 +43,122 @@ class KFoldsSampler:
 
 class ClassificationDatasetParser:
     def __init__(self):
-        pass
+        self.all_fields = []
+        self.init_fields()
+        self.encodes = {}
+        self.init_encodes()
+        self.ranges = {}
+        self.dimension = 0
 
-    @staticmethod
-    def parse(row):
+    def init_fields(self):
+        self.all_fields = [
+            'age', 'job', 'marital', 'education', 'default', 'balance',
+            'housing', 'loan', 'contact', 'day', 'month', 'duration',
+            'campaign', 'pdays', 'previous', 'poutcome'
+        ]
+
+    def init_encodes(self):
+        self.encodes['job'] = {
+            'admin.': 0,
+            'blue-collar': 1,
+            'entrepreneur': 2,
+            'housemaid': 3,
+            'management': 4,
+            'retired': 5,
+            'self-employed': 6,
+            'services': 7,
+            'student': 8,
+            'technician': 9,
+            'unemployed': 10,
+            'unknown': 11
+        }
+        self.encodes['marital'] = {
+            'divorced': 0,
+            'married': 1,
+            'single': 2
+        }
+        self.encodes['education'] = {
+            'primary': 0,
+            'secondary': 1,
+            'tertiary': 2,
+            'unknown': 3
+        }
+        self.encodes['contact'] = {
+            'cellular': 0,
+            'telephone': 1,
+            'unknown': 2
+        }
+        self.encodes['month'] = {
+            'jan': 0,
+            'feb': 1,
+            'mar': 2,
+            'apr': 3,
+            'may': 4,
+            'jun': 5,
+            'jul': 6,
+            'aug': 7,
+            'sep': 8,
+            'oct': 9,
+            'nov': 10,
+            'dec': 11
+        }
+        self.encodes['poutcome'] = {
+            'failure': 0,
+            'other': 1,
+            'success': 2,
+            'unknown': 3
+        }
+
+    def init_ranges(self):
+        last = 0
+        for field in self.all_fields:
+            l = len(self.encodes[field]) if field in self.encodes.keys() else 1
+            self.ranges = list(range(last, last + l))
+            last += l
+        self.dimension = last
+
+    def parse(self, row):
         x = []
-        x += ClassificationDatasetParser.parse_age(row)
-        x += ClassificationDatasetParser.parse_job(row)
-        x += ClassificationDatasetParser.parse_marital(row)
-        x += ClassificationDatasetParser.parse_education(row)
-        x += ClassificationDatasetParser.parse_default(row)
-        x += ClassificationDatasetParser.parse_balance(row)
-        x += ClassificationDatasetParser.parse_housing(row)
-        x += ClassificationDatasetParser.parse_loan(row)
-        x += ClassificationDatasetParser.parse_contact(row)
-        x += ClassificationDatasetParser.parse_day(row)
-        x += ClassificationDatasetParser.parse_month(row)
-        x += ClassificationDatasetParser.parse_duration(row)
-        x += ClassificationDatasetParser.parse_campaign(row)
-        x += ClassificationDatasetParser.parse_pdays(row)
-        x += ClassificationDatasetParser.parse_previous(row)
-        x += ClassificationDatasetParser.parse_poutcome(row)
-        y = ClassificationDatasetParser.parse_y(row)
+        x += self.parse_age(row)
+        x += self.parse_job(row)
+        x += self.parse_marital(row)
+        x += self.parse_education(row)
+        x += self.parse_default(row)
+        x += self.parse_balance(row)
+        x += self.parse_housing(row)
+        x += self.parse_loan(row)
+        x += self.parse_contact(row)
+        x += self.parse_day(row)
+        x += self.parse_month(row)
+        x += self.parse_duration(row)
+        x += self.parse_campaign(row)
+        x += self.parse_pdays(row)
+        x += self.parse_previous(row)
+        x += self.parse_poutcome(row)
+        y = self.parse_y(row)
         return x, y
 
     @staticmethod
     def parse_age(row):
         return [int(row['age'])]
 
-    @staticmethod
-    def parse_job(row):
+    def parse_job(self, row):
         job = row['job']
-        encodes = {
-            'admin.': 0,
-            'blue-collar': 1,
-            'entrepreneur': 2,
-            'housemaid': 4,
-            'management': 5,
-            'retired': 6,
-            'self-employed': 7,
-            'services': 8,
-            'student': 9,
-            'technician': 10,
-            'unemployed': 11,
-            'unknown': 12
-        }
+        encodes = self.encodes['job']
         encode = [0] * len(encodes)
         encode[encodes[job]] = 1
         return encode
 
-    @staticmethod
-    def parse_marital(row):
+    def parse_marital(self, row):
         mar = row['marital']
-        encodes = {
-            'divorced': 0,
-            'married': 1,
-            'single': 2
-        }
+        encodes = self.encodes['marital']
         encode = [0] * len(encodes)
         encode[encodes[mar]] = 1
         return encode
 
-    @staticmethod
-    def parse_education(row):
+    def parse_education(self, row):
         edu = row['education']
-        encodes = {
-            'primary': 0,
-            'secondary': 1,
-            'tertiary': 2,
-            'unknown': 3
-        }
+        encodes = self.encodes['education']
         encode = [0] * len(encodes)
         encode[encodes[edu]] = 1
         return encode
@@ -136,14 +182,9 @@ class ClassificationDatasetParser:
         loan = row['loan']
         return [0] if loan == 'no' else [1]
 
-    @staticmethod
-    def parse_contact(row):
+    def parse_contact(self, row):
         contact = row['contact']
-        encodes = {
-            'cellular': 0,
-            'telephone': 1,
-            'unknown': 2
-        }
+        encodes = self.encodes['contact']
         encode = [0] * len(encodes)
         encode[encodes[contact]] = 1
         return encode
@@ -152,23 +193,9 @@ class ClassificationDatasetParser:
     def parse_day(row):
         return [int(row['day'])]
 
-    @staticmethod
-    def parse_month(row):
+    def parse_month(self, row):
         month = row['month']
-        encodes = {
-            'jan': 0,
-            'feb': 1,
-            'mar': 2,
-            'apr': 3,
-            'may': 4,
-            'jun': 5,
-            'jul': 6,
-            'aug': 7,
-            'sep': 8,
-            'oct': 9,
-            'nov': 10,
-            'dec': 11
-        }
+        encodes = self.encodes['month']
         encode = [0] * len(encodes)
         encode[encodes[month]] = 1
         return encode
@@ -189,15 +216,9 @@ class ClassificationDatasetParser:
     def parse_previous(row):
         return [int(row['previous'])]
 
-    @staticmethod
-    def parse_poutcome(row):
-        poutcome = row['contact']
-        encodes = {
-            'failure': 0,
-            'other': 1,
-            'success': 2,
-            'unknown': 3
-        }
+    def parse_poutcome(self, row):
+        poutcome = row['poutcome']
+        encodes = self.encodes['poutcome']
         encode = [0] * len(encodes)
         encode[encodes[poutcome]] = 1
         return encode
@@ -206,6 +227,9 @@ class ClassificationDatasetParser:
     def parse_y(row):
         return int(row['y'])
 
-    @staticmethod
-    def range(keys):
-        pass
+    def range(self, keys):
+        r = []
+        for key in keys:
+            assert key in self.all_fields
+            r += self.ranges[key][:]
+        return r
