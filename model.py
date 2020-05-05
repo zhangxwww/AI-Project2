@@ -1,5 +1,8 @@
 import random
 import numpy as np
+import torch
+import torch.nn as nn
+import torch.optim as optim
 
 
 class SVM:
@@ -145,3 +148,44 @@ def d_sigmoid(x):
     sigmoid'(x) = sigmoid(x) * (1 - sigmoid(x))
     """
     return sigmoid(x) * (1 - sigmoid(x))
+
+
+class MLP_Torch:
+    class Module(nn.Module):
+        def __init__(self, in_dim, out_dim, hide_dim):
+            super().__init__()
+            self.layers = nn.Sequential([
+                nn.Linear(in_dim, hide_dim),
+                nn.Sigmoid(),
+                nn.Linear(hide_dim, out_dim),
+                nn.Sigmoid()
+            ])
+
+        def forward(self, x):
+            return self.layers(x)
+
+    def __init__(self, in_dim, out_dim, hide_dim, lr, epoch):
+        self.in_dim = in_dim
+        self.out_dim = out_dim
+        self.hide_dim = hide_dim
+        self.lr = lr
+        self.epoch = epoch
+
+        self.model = MLP_Torch.Module(in_dim, out_dim, hide_dim)
+        self.loss = nn.MSELoss()
+        self.optimizer = optim.SGD(self.model.parameters(), lr=lr)
+
+    def fit(self, x, y):
+        self.model.train()
+        for _ in range(self.epoch):
+            self.optimizer.zero_grad()
+            pred = self.model(x)
+            loss = self.loss(y, pred)
+            loss.backward()
+            self.optimizer.step()
+
+    def predict(self, x):
+        self.model.eval()
+        with torch.no_grad():
+            pred = self.model(x)
+        return pred
