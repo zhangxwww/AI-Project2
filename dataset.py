@@ -12,6 +12,7 @@ class Dataset:
         self.y = None
         self.num = self._load_data()
         self.sampler = KFoldsSampler(self.num, k_folds)
+        self.parser = ClassificationDatasetParser()
 
     def _load_data(self):
         with open(self.path) as f:
@@ -19,7 +20,7 @@ class Dataset:
             reader = csv.DictReader(f)
             for row in reader:
                 if self.task == 'classification':
-                    x, y = ClassificationDatasetParser.parse_y(row)
+                    x, y = self.parser.parse(row)
                     xs.append(x)
                     ys.append(y)
         self.x = np.stack(xs)
@@ -37,8 +38,17 @@ class KFoldsSampler:
         self.num_each_fold = n // k_folds
 
     def __call__(self, x, y, k):
-        index = self.order[k * self.num_each_fold: (k + 1) * self.num_each_fold]
-        return x[index], y[index]
+        train_index = np.concatenate([
+            self.order[:k * self.num_each_fold],
+            self.order[(k + 1) * self.num_each_fold:]
+        ])
+        test_index = self.order[k * self.num_each_fold: (k + 1) * self.num_each_fold]
+        return {
+            'train_x': x[train_index],
+            'train_y': y[train_index].reshape(-1, 1),
+            'test_x': x[test_index],
+            'test_y': y[test_index].reshape(-1, 1)
+        }
 
 
 class ClassificationDatasetParser:

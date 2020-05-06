@@ -8,8 +8,7 @@ class DefaultFeatureSelector:
     Use all features
     """
 
-    def __init__(self):
-        parser = ClassificationDatasetParser()
+    def __init__(self, parser):
         self.dimension = parser.dimension
 
     @staticmethod
@@ -22,8 +21,7 @@ class ManualFeatureSelector:
     Extract features by hand
     """
 
-    def __init__(self):
-        parser = ClassificationDatasetParser()
+    def __init__(self, parser):
         self.feature_index = parser.range([
             'job', 'default', 'balance', 'housing', 'loan',
             'duration', 'campaign', 'pdays', 'previous', 'poutcome'
@@ -39,12 +37,11 @@ class AutoFeatureSelector:
     Extract features by \Chi^2 statistics
     """
 
-    def __init__(self):
+    def __init__(self, parser):
         self.selector = feature_selection.SelectPercentile(
             score_func=feature_selection.chi2,
             percentile=50
         )
-        parser = ClassificationDatasetParser()
         self.dimension = parser.dimension // 2
 
     def select(self, x, y):
