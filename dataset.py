@@ -8,23 +8,25 @@ class Dataset:
         self.path = path
         self.k_folds = k_folds
 
+        if self.task == 'classification':
+            self.parser = ClassificationDatasetParser()
+        else:
+            self.parser = ClusterDatasetParser()
         self.x = None
         self.y = None
         self.num = self._load_data()
         self.sampler = KFoldsSampler(self.num, k_folds)
-        self.parser = ClassificationDatasetParser()
 
     def _load_data(self):
         with open(self.path) as f:
             xs, ys = [], []
             reader = csv.DictReader(f)
             for row in reader:
-                if self.task == 'classification':
-                    x, y = self.parser.parse(row)
-                    xs.append(x)
-                    ys.append(y)
+                x, y = self.parser.parse(row)
+                xs.append(x)
+                ys.append(y)
         self.x = np.stack(xs)
-        self.y = np.vstack(ys)
+        self.y = np.stack(ys)
         return self.x.shape[0]
 
     def get_data(self, fold):
@@ -44,10 +46,10 @@ class KFoldsSampler:
         ])
         test_index = self.order[k * self.num_each_fold: (k + 1) * self.num_each_fold]
         return {
-            'train_x': x[train_index],
-            'train_y': y[train_index].reshape(-1, 1),
-            'test_x': x[test_index],
-            'test_y': y[test_index].reshape(-1, 1)
+            'train_x': x[train_index].astype('float32'),
+            'train_y': y[train_index],
+            'test_x': x[test_index].astype('float32'),
+            'test_y': y[test_index]
         }
 
 
@@ -57,8 +59,9 @@ class ClassificationDatasetParser:
         self.init_fields()
         self.encodes = {}
         self.init_encodes()
-        self.ranges = {}
         self.dimension = 0
+        self.ranges = {}
+        self.init_ranges()
 
     def init_fields(self):
         self.all_fields = [
@@ -123,7 +126,7 @@ class ClassificationDatasetParser:
         last = 0
         for field in self.all_fields:
             l = len(self.encodes[field]) if field in self.encodes.keys() else 1
-            self.ranges = list(range(last, last + l))
+            self.ranges[field] = list(range(last, last + l))
             last += l
         self.dimension = last
 
@@ -243,3 +246,23 @@ class ClassificationDatasetParser:
             assert key in self.all_fields
             r += self.ranges[key][:]
         return r
+
+
+class ClusterDatasetParser:
+    def __init__(self):
+        self.y_encodes = self.init_y_encodes()
+
+    @staticmethod
+    def init_y_encodes():
+        return {
+            'Leptodactylidae': 0,
+            'Dendrobatidae': 1,
+            'Hylidae': 2,
+            'Bufonidae': 3
+        }
+
+    def parse(self, row):
+        x = list(row.values())[:22]
+        x = np.array(list(map(float, x)))
+        y = self.y_encodes[row['Family']]
+        return x, y

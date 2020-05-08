@@ -1,3 +1,5 @@
+import numpy as np
+
 from sklearn import svm
 from sklearn import tree
 from sklearn import neighbors
@@ -9,6 +11,9 @@ from feature import DefaultFeatureSelector, ManualFeatureSelector, AutoFeatureSe
 
 from score import accuracy, precision, recall, f_measure
 
+from utils import timing
+import time
+
 N_FOLDS = 5
 
 
@@ -17,36 +22,40 @@ def exp1():
     feature_selectors = prepare_feature_selector(dataset.parser)
     for fs, fs_desc in feature_selectors:
         print(fs_desc)
-        models, model_list = prepare_models(fs.dimension)
-        acc_list, pre_list, recall_list, f_list = prepare_score(model_list)
+        model_list = get_model_list()
+        score_list = prepare_score(model_list)
         for fold in range(N_FOLDS):
             data = dataset.get_data(fold)
-            for model, model_desc in models:
+            for model, model_desc in prepare_models(fs.dimension):
                 print(model_desc)
-                model.fit(data['train_x'], data['train_y'])
-                pred = model.predict(data['test_x'])
+                train_x = fs.select(data['train_x'], data['train_y'])
+                test_x = fs.select(data['test_x'], None)
+                start = time.time()
+                model.fit(train_x, data['train_y'])
+                pred = model.predict(test_x)
+                end = time.time()
+                print('{:.3f}s costs'.format(end - start))
                 gt = data['test_y']
-                acc_list[model_desc].append(accuracy(pred, gt))
-                pre_list[model_desc].append(precision(pred, gt))
-                recall_list[model_desc].append(recall(pred, gt))
-                f_list[model_desc].append(f_measure(pred, gt))
-        print(acc_list)
-        print(pre_list)
-        print(recall_list)
-        print(f_list)
+                score_list['accuracy'][model_desc].append(accuracy(pred, gt))
+                score_list['precision'][model_desc].append(precision(pred, gt))
+                score_list['recall'][model_desc].append(recall(pred, gt))
+                score_list['f_measure'][model_desc].append(f_measure(pred, gt))
+        show_results(score_list)
 
 
 def prepare_models(d):
     return [
-               (SVM(), 'SVM'),
-               (svm.SVC(), 'SVM_sklearn'),
-               (MLP(d, 1, d // 2, lr=0.01, epoch=100), 'MLP'),
-               (MLP_Torch(d, 1, d // 2, lr=0.01, epoch=100), 'MLP_Torch'),
-               (tree.DecisionTreeClassifier(), 'DecisionTree_sklearn'),
-               (neighbors.KNeighborsClassifier(n_neighbors=5), 'K-nn')
-           ], [
-               'SVM', 'SVM_sklearn', 'MLP', 'MLP_Torch', 'DecisionTree_sklearn', 'K-nn'
-           ]
+        (SVM(), 'SVM'),
+        (svm.SVC(gamma='auto'), 'SVM_sklearn'),
+        (MLP(d, 1, d // 2, lr=0.01, epoch=100), 'MLP'),
+        (MLP_Torch(d, 1, d // 2, lr=0.01, epoch=100), 'MLP_Torch'),
+        (tree.DecisionTreeClassifier(), 'Tree_sklearn'),
+        (neighbors.KNeighborsClassifier(n_neighbors=1), 'K-nn')
+    ]
+
+
+def get_model_list():
+    return ['SVM', 'SVM_sklearn', 'MLP', 'MLP_Torch', 'Tree_sklearn', 'K-nn']
 
 
 def prepare_dataset(folds):
@@ -57,7 +66,7 @@ def prepare_feature_selector(parser):
     return [
         (DefaultFeatureSelector(parser), 'All features'),
         (ManualFeatureSelector(parser), 'Features selected by hand'),
-        (AutoFeatureSelector(parser), 'Features selected according to the statistics')
+        # (AutoFeatureSelector(parser), 'Features selected according to the statistics')
     ]
 
 
@@ -66,4 +75,28 @@ def prepare_score(model_list):
     pre = {m: [] for m in model_list}
     re = {m: [] for m in model_list}
     f = {m: [] for m in model_list}
-    return acc, pre, re, f
+    return {
+        'accuracy': acc,
+        'precision': pre,
+        'recall': re,
+        'f_measure': f
+    }
+
+
+def show_results(score_list):
+    models = get_model_list()
+    print(' ' * 10, end='')
+    for m in models:
+        print('{:<12}'.format(m), end=' ')
+    print()
+    for k, v in score_list.items():
+        print('{:<9}'.format(k), end=' ')
+        for m in models:
+            mean = np.mean(v[m])
+            mean = '{:.3f}'.format(mean)
+            print('{:<12}'.format(mean), end=' ')
+        print()
+
+
+if __name__ == '__main__':
+    exp1()

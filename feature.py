@@ -38,11 +38,14 @@ class AutoFeatureSelector:
     """
 
     def __init__(self, parser):
-        self.selector = feature_selection.SelectPercentile(
-            score_func=feature_selection.chi2,
-            percentile=50
-        )
         self.dimension = parser.dimension // 2
+        self.selector = feature_selection.SelectKBest(
+            score_func=feature_selection.chi2,
+            k=self.dimension
+        )
 
     def select(self, x, y):
-        return self.selector.fit_transform(x, y)
+        if y is not None:
+            return self.selector.fit_transform(x, y)
+        else:
+            return self.selector.transform(x)

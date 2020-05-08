@@ -6,7 +6,7 @@ def timing(f):
         start = time.time()
         res = f(*args, **kwargs)
         end = time.time()
-        print("{.3f}s costs".format(end - start))
+        print("{}s costs".format(end - start))
         return res
 
     return g
