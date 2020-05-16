@@ -12,7 +12,7 @@ class SVM:
         self.penalty = 1
         self.tol = 1e-3
         self.passes = 10
-        self.max_iter = 1000
+        self.max_iter = 2000
         self.k = None
         self.alpha = None
         self.w = None
@@ -27,9 +27,11 @@ class SVM:
         self.w = np.dot(self.alpha * self.y, self.x)
 
     def predict(self, x):
-        return np.sign(np.dot(x, self.w) + self.b)
+        return np.where(np.dot(x, self.w) + self.b > 0, 1, 0)
 
     def smo(self):
+        np.random.seed(0)
+
         n = self.x.shape[0]
         it = 0
         p = 0
@@ -92,7 +94,6 @@ class SVM:
             else:
                 p = 0
 
-        print(it)
         return b
 
 
@@ -157,9 +158,9 @@ class MLP_Torch:
         def __init__(self, in_dim, out_dim, hide_dim):
             super().__init__()
             self.layers = nn.Sequential(
-                nn.Linear(in_dim, hide_dim),
+                nn.Linear(in_dim, hide_dim, bias=False),
                 nn.Sigmoid(),
-                nn.Linear(hide_dim, out_dim),
+                nn.Linear(hide_dim, out_dim, bias=False),
                 nn.Sigmoid()
             )
 
@@ -197,18 +198,23 @@ class MLP_Torch:
 
 
 class KMeans:
-    def __init__(self, n_clusters, metric, steps=5):
+    def __init__(self, n_clusters, metric, steps=10):
         self.n_clusters = n_clusters
         self.steps = steps
         self.metric = metric
+        self.tol = 1e-5
 
     def fit_transform(self, x):
+        np.random.seed(0)
         centers = self.init_centers(x)
         clusters = None
         for _ in range(self.steps):
             clusters = self.cluster(centers, x)
-            centers = self.update_centers(clusters, x)
-        return clusters
+            centers_n = self.update_centers(clusters, x)
+            if ((centers_n - centers) ** 2).mean() < self.tol:
+                break
+            centers = centers_n
+        return -clusters
 
     def init_centers(self, x):
         n, m = x.shape[0], self.n_clusters
@@ -225,9 +231,9 @@ class KMeans:
 
     def update_centers(self, clusters, x):
         m, d = self.n_clusters, x.shape[1]
-        centers = torch.zeros((m, d))
+        centers = np.zeros((m, d))
         for i in range(m):
-            centers[i] += clusters[:, i].dot(m)
+            centers[i] += clusters[:, i].dot(x)
             centers[i] /= clusters[:, i].sum()
         return centers
 
@@ -262,6 +268,7 @@ class HierarchicalCluster:
         clusters = {i: HierarchicalCluster.Node(i, None, None, i) for i in range(n)}
         row_index, col_index = -1, -1
         for k in range(n - self.n_clusters):
+            print(k)
             min_dis = np.inf
             for i in range(n):
                 for j in range(n):
@@ -284,3 +291,37 @@ class HierarchicalCluster:
         for i, node in enumerate(clusters.values()):
             for leaf in node.get_leaves():
                 self.labels_[leaf] = i
+
+
+def _test_svm():
+    from sklearn import svm
+    from sklearn import datasets
+    from sklearn.model_selection import train_test_split as ts
+
+    np.random.seed(0)
+
+    iris = datasets.load_iris()
+    x = iris.data
+    y = iris.target
+    idx = np.argwhere(y < 2)
+    idx = [i[0] for i in idx]
+    x = x[idx]
+    y = y[idx]
+
+    train_x, test_x, train_y, test_y = ts(x, y, test_size=0.3)
+
+    s1 = SVM()
+    s2 = svm.SVC(gamma='auto', kernel='linear')
+
+    s1.fit(train_x, train_y)
+    s2.fit(train_x, train_y)
+
+    pred1 = s1.predict(test_x).astype(np.int32)
+    pred2 = s2.predict(test_x).astype(np.int32)
+    print((pred1 == test_y).sum() / pred1.shape[0])
+    print((pred2 == test_y).sum() / pred2.shape[0])
+    print((pred1 == pred2).sum() / pred1.shape[0])
+
+
+if __name__ == '__main__':
+    _test_svm()

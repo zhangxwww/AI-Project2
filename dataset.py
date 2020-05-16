@@ -15,7 +15,7 @@ class Dataset:
         self.x = None
         self.y = None
         self.num = self._load_data()
-        self.sampler = KFoldsSampler(self.num, k_folds)
+        self.sampler = KFoldsSampler(self.num, k_folds) if k_folds is not None else None
 
     def _load_data(self):
         with open(self.path) as f:
@@ -30,7 +30,10 @@ class Dataset:
         return self.x.shape[0]
 
     def get_data(self, fold):
-        return self.sampler(self.x, self.y, fold)
+        if fold is not None:
+            return self.sampler(self.x, self.y, fold)
+        else:
+            return self.x, self.y
 
 
 class KFoldsSampler:
@@ -251,6 +254,7 @@ class ClassificationDatasetParser:
 class ClusterDatasetParser:
     def __init__(self):
         self.y_encodes = self.init_y_encodes()
+        self.dimension = 22
 
     @staticmethod
     def init_y_encodes():
@@ -262,7 +266,7 @@ class ClusterDatasetParser:
         }
 
     def parse(self, row):
-        x = list(row.values())[:22]
+        x = [row['MFCCs_{:>2}'.format(i)] for i in range(1, 23)]
         x = np.array(list(map(float, x)))
         y = self.y_encodes[row['Family']]
         return x, y

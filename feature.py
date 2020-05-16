@@ -1,6 +1,5 @@
 from sklearn import feature_selection
-
-from dataset import ClassificationDatasetParser
+from sklearn import preprocessing
 
 
 class DefaultFeatureSelector:
@@ -13,7 +12,7 @@ class DefaultFeatureSelector:
 
     @staticmethod
     def select(x, _):
-        return x
+        return preprocessing.MinMaxScaler().fit_transform(x)
 
 
 class ManualFeatureSelector:
@@ -29,7 +28,9 @@ class ManualFeatureSelector:
         self.dimension = len(self.feature_index)
 
     def select(self, x, _):
-        return x[:, self.feature_index]
+        x = x[:, self.feature_index]
+        x = preprocessing.MinMaxScaler().fit_transform(x)
+        return x
 
 
 class AutoFeatureSelector:
@@ -45,6 +46,7 @@ class AutoFeatureSelector:
         )
 
     def select(self, x, y):
+        x = preprocessing.MinMaxScaler().fit_transform(x)
         if y is not None:
             return self.selector.fit_transform(x, y)
         else:

@@ -11,7 +11,6 @@ from feature import DefaultFeatureSelector, ManualFeatureSelector, AutoFeatureSe
 
 from score import accuracy, precision, recall, f_measure
 
-from utils import timing
 import time
 
 N_FOLDS = 5
@@ -30,10 +29,12 @@ def exp1():
                 print(model_desc)
                 train_x = fs.select(data['train_x'], data['train_y'])
                 test_x = fs.select(data['test_x'], None)
+
                 start = time.time()
                 model.fit(train_x, data['train_y'])
                 pred = model.predict(test_x)
                 end = time.time()
+
                 print('{:.3f}s costs'.format(end - start))
                 gt = data['test_y']
                 score_list['accuracy'][model_desc].append(accuracy(pred, gt))
@@ -45,17 +46,24 @@ def exp1():
 
 def prepare_models(d):
     return [
-        (SVM(), 'SVM'),
-        (svm.SVC(gamma='auto'), 'SVM_sklearn'),
-        (MLP(d, 1, d // 2, lr=0.01, epoch=100), 'MLP'),
-        (MLP_Torch(d, 1, d // 2, lr=0.01, epoch=100), 'MLP_Torch'),
-        (tree.DecisionTreeClassifier(), 'Tree_sklearn'),
-        (neighbors.KNeighborsClassifier(n_neighbors=1), 'K-nn')
+        # (SVM(), 'SVM'),
+        # (svm.SVC(gamma='auto'), 'SVM_sklearn'),
+        (MLP(d, 1, d // 2, lr=0.00001, epoch=10), 'MLP'),
+        (MLP_Torch(d, 1, d // 2, lr=0.00001, epoch=10), 'MLP_Torch'),
+        # (tree.DecisionTreeClassifier(), 'Tree_sklearn'),
+        # (neighbors.KNeighborsClassifier(n_neighbors=1), 'K-nn')
     ]
 
 
 def get_model_list():
-    return ['SVM', 'SVM_sklearn', 'MLP', 'MLP_Torch', 'Tree_sklearn', 'K-nn']
+    return [
+        # 'SVM',
+        # 'SVM_sklearn',
+        'MLP',
+        'MLP_Torch',
+        # 'Tree_sklearn',
+        # 'K-nn'
+    ]
 
 
 def prepare_dataset(folds):
@@ -66,7 +74,7 @@ def prepare_feature_selector(parser):
     return [
         (DefaultFeatureSelector(parser), 'All features'),
         (ManualFeatureSelector(parser), 'Features selected by hand'),
-        # (AutoFeatureSelector(parser), 'Features selected according to the statistics')
+        (AutoFeatureSelector(parser), 'Features selected according to the statistics')
     ]
 
 
